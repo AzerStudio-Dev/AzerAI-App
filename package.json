@@ -1,0 +1,120 @@
+{
+  "name": "azerai-app",
+  "version": "1.0.5",
+  "description": "AzerAI App - Azərbaycan Dilində Qabaqcıl Səsli AI Asistent",
+  "private": true,
+  "main": "electron/main.js",
+  "author": "AzerStudio Dev",
+  "license": "MIT",
+  "copyright": "Copyright © 2026 AzerStudio Dev",
+  "homepage": "https://github.com/AzerStudio-Dev/AzerAI-App",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AzerStudio-Dev/AzerAI-App.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "electron": "node electron/ensure-ui.js && electron .",
+    "desktop": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "start": "npm run desktop",
+    "build:ui": "vite build",
+    "build": "npm run build:win",
+    "build:win": "npm run build:ui && electron-builder --win",
+    "build:linux": "npm run build:ui && electron-builder --linux",
+    "build:mac": "npm run build:ui && electron-builder --mac",
+    "build:all": "npm run build:ui && electron-builder --win --linux --mac"
+  },
+  "dependencies": {
+    "@livekit/components-react": "^2.9.13",
+    "@livekit/components-styles": "^1.1.6",
+    "@livekit/protocol": "^1.36.0",
+    "dotenv": "^16.4.7",
+    "livekit-client": "^2.15.7",
+    "livekit-server-sdk": "^2.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.0.1",
+    "electron": "^41.7.1",
+    "electron-builder": "^26.0.12",
+    "vite": "^6.0.7",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.azerai.app",
+    "productName": "AzerAI App",
+    "files": [
+      "dist/renderer/**/*",
+      "electron/**/*",
+      "public/icon.png",
+      "package.json"
+    ],
+    "extraResources": [],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "icon": "public/icon.png"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "include": "electron/installer.nsh"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "AzerStudio-Dev",
+        "repo": "AzerAI-App"
+      }
+    ]
+  }
+}

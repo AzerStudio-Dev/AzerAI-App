@@ -1,0 +1,605 @@
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  -webkit-app-region: drag;
+}
+
+.azerai {
+  width: 280px;
+  height: 280px;
+  position: relative;
+}
+
+#waveCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid #00ffe5;
+  opacity: 0.6;
+  transition: border-color 0.5s ease, opacity 0.5s ease;
+}
+
+.r1 {
+  width: 100%;
+  height: 100%;
+  animation: spin 6s linear infinite;
+}
+
+.r2 {
+  width: 70%;
+  height: 70%;
+  top: 15%;
+  left: 15%;
+  border-style: dashed;
+  animation: spinReverse 4s linear infinite;
+}
+
+.core {
+  position: absolute;
+  width: 40%;
+  height: 40%;
+  top: 30%;
+  left: 30%;
+  background: radial-gradient(circle, #00ffe5, transparent);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+  z-index: 1;
+  transition: background 0.5s ease, opacity 0.5s ease;
+}
+
+.text {
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  top: 43%;
+  color: #00ffe5;
+  font-family: Arial;
+  letter-spacing: 3px;
+  z-index: 2;
+  font-size: 14px;
+  font-weight: bold;
+  transition: color 0.5s ease;
+}
+
+.version-text {
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  top: 55%;
+  color: rgba(0, 255, 229, 0.5);
+  font-family: Arial;
+  letter-spacing: 2px;
+  z-index: 2;
+  font-size: 9px;
+  font-weight: normal;
+  transition: color 0.5s ease;
+}
+
+.status-dot {
+  position: absolute;
+  bottom: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00ffe5;
+  z-index: 3;
+  animation: statusPulse 1.5s infinite;
+  box-shadow: 0 0 8px #00ffe5;
+  transition: background 0.5s ease, box-shadow 0.5s ease;
+}
+
+.status-text {
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  bottom: 6%;
+  color: rgba(0, 255, 229, 0.8);
+  font-family: Arial;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  z-index: 3;
+  transition: color 0.5s ease;
+}
+
+/* ====== STATE: DISCONNECTED (Red) ====== */
+body.disconnected .status-dot {
+  background: #f87171;
+  box-shadow: 0 0 8px #f87171;
+  animation: statusPulse 2.5s infinite;
+}
+
+body.disconnected .core {
+  opacity: 0.3;
+  animation: none;
+}
+
+body.disconnected .ring {
+  border-color: #f87171;
+  opacity: 0.3;
+}
+
+body.disconnected .text {
+  color: #f87171;
+}
+
+body.disconnected .version-text {
+  color: rgba(248, 113, 113, 0.5);
+}
+
+body.disconnected .status-text {
+  color: rgba(248, 113, 113, 0.8);
+}
+
+/* ====== STATE: WAITING (Gray/Orange - Agent not in room yet) ====== */
+body.waiting .status-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 8px #fbbf24;
+  animation: statusPulse 2s infinite;
+}
+
+body.waiting .core {
+  opacity: 0.4;
+  animation: waitingPulse 2s infinite;
+}
+
+body.waiting .ring {
+  border-color: #fbbf24;
+  opacity: 0.4;
+}
+
+body.waiting .text {
+  color: #fbbf24;
+}
+
+body.waiting .version-text {
+  color: rgba(251, 191, 36, 0.5);
+}
+
+body.waiting .status-text {
+  color: rgba(251, 191, 36, 0.7);
+}
+
+/* ====== STATE: LISTENING (Cyan/Default) ====== */
+body.listening .core {
+  animation: pulse 1.5s infinite;
+}
+
+/* ====== STATE: THINKING (Purple) ====== */
+body.thinking .core {
+  animation: thinkingPulse 1s infinite;
+  background: radial-gradient(circle, #a78bfa, transparent);
+}
+
+body.thinking .status-dot {
+  background: #a78bfa;
+  box-shadow: 0 0 8px #a78bfa;
+}
+
+body.thinking .ring {
+  border-color: #a78bfa;
+}
+
+body.thinking .text {
+  color: #a78bfa;
+}
+
+body.thinking .version-text {
+  color: rgba(167, 139, 250, 0.5);
+}
+
+body.thinking .status-text {
+  color: rgba(167, 139, 250, 0.8);
+}
+
+/* ====== STATE: SPEAKING (Cyan, intense) ====== */
+body.speaking .core {
+  animation: speakingPulse 0.4s infinite;
+}
+
+/* ====== STATE: TOOL (Yellow) ====== */
+body.tool .core {
+  animation: toolPulse 0.8s infinite;
+  background: radial-gradient(circle, #fbbf24, transparent);
+}
+
+body.tool .status-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 10px #fbbf24;
+}
+
+body.tool .ring {
+  border-color: #fbbf24;
+  opacity: 0.7;
+}
+
+body.tool .text {
+  color: #fbbf24;
+}
+
+body.tool .version-text {
+  color: rgba(251, 191, 36, 0.5);
+}
+
+body.tool .status-text {
+  color: rgba(251, 191, 36, 0.9);
+}
+
+/* ====== KEYFRAMES ====== */
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spinReverse {
+  100% { transform: rotate(-360deg); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.6; }
+}
+
+@keyframes speakingPulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.35); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+@keyframes thinkingPulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 0.5; }
+}
+
+@keyframes toolPulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  30% { transform: scale(1.2); opacity: 1; }
+  60% { transform: scale(1.05); opacity: 0.85; }
+  100% { transform: scale(1); opacity: 0.7; }
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes waitingPulse {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.1); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 0.3; }
+}
+
+/* Glassmorphic language toggle button */
+.lang-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-app-region: no-drag; /* crucial to bypass window drag */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.lang-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+  transform: scale(1.08);
+}
+
+.lang-btn:active {
+  transform: scale(0.95);
+}
+
+/* Localized styles matching state colors dynamically */
+body.disconnected .lang-btn {
+  border-color: rgba(248, 113, 113, 0.25);
+  color: #f87171;
+}
+
+body.waiting .lang-btn {
+  border-color: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+}
+
+body.listening .lang-btn {
+  border-color: rgba(0, 255, 229, 0.25);
+  color: #00ffe5;
+}
+
+body.thinking .lang-btn {
+  border-color: rgba(167, 139, 250, 0.25);
+  color: #a78bfa;
+}
+
+body.speaking .lang-btn {
+  border-color: rgba(0, 255, 229, 0.3);
+  color: #00ffe5;
+}
+
+body.tool .lang-btn {
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+
+/* Glassmorphic microphone button */
+.mic-btn {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-app-region: no-drag;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.mic-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+  transform: scale(1.08);
+}
+
+.mic-btn:active {
+  transform: scale(0.95);
+}
+
+/* Muted state styling */
+.mic-btn.muted {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+}
+
+.mic-btn.muted:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
+/* Localized styles matching state colors dynamically when active */
+body.disconnected .mic-btn:not(.muted) {
+  border-color: rgba(248, 113, 113, 0.25);
+  color: #f87171;
+}
+
+body.waiting .mic-btn:not(.muted) {
+  border-color: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+}
+
+body.listening .mic-btn:not(.muted) {
+  border-color: rgba(0, 255, 229, 0.25);
+  color: #00ffe5;
+}
+
+body.thinking .mic-btn:not(.muted) {
+  border-color: rgba(167, 139, 250, 0.25);
+  color: #a78bfa;
+}
+
+body.speaking .mic-btn:not(.muted) {
+  border-color: rgba(0, 255, 229, 0.3);
+  color: #00ffe5;
+}
+
+
+body.tool .mic-btn:not(.muted) {
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+
+/* ====== CAMERA BUTTON ====== */
+.cam-btn {
+  position: absolute;
+  top: 15px;
+  left: 55px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-app-region: no-drag;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.cam-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+  transform: scale(1.08);
+}
+
+.cam-btn:active {
+  transform: scale(0.95);
+}
+
+/* Camera off state styling */
+.cam-btn.off {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+}
+
+.cam-btn.off:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
+/* State-aware camera button colors */
+body.disconnected .cam-btn:not(.off) {
+  border-color: rgba(248, 113, 113, 0.25);
+  color: #f87171;
+}
+
+body.waiting .cam-btn:not(.off) {
+  border-color: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+}
+
+body.listening .cam-btn:not(.off) {
+  border-color: rgba(0, 255, 229, 0.25);
+  color: #00ffe5;
+}
+
+body.thinking .cam-btn:not(.off) {
+  border-color: rgba(167, 139, 250, 0.25);
+  color: #a78bfa;
+}
+
+body.speaking .cam-btn:not(.off) {
+  border-color: rgba(0, 255, 229, 0.3);
+  color: #00ffe5;
+}
+
+body.tool .cam-btn:not(.off) {
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+
+/* ====== SCREEN SHARE BUTTON ====== */
+.share-btn {
+  position: absolute;
+  top: 15px;
+  left: 95px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-app-region: no-drag;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.share-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+  transform: scale(1.08);
+}
+
+.share-btn:active {
+  transform: scale(0.95);
+}
+
+/* Screen sharing ACTIVE state — green glow */
+.share-btn.active {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #4ade80;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25);
+  animation: shareGlow 1.5s ease-in-out infinite;
+}
+
+.share-btn.active:hover {
+  background: rgba(34, 197, 94, 0.25);
+  border-color: rgba(34, 197, 94, 0.7);
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
+}
+
+@keyframes shareGlow {
+  0%, 100% { box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25); }
+  50%       { box-shadow: 0 4px 22px rgba(34, 197, 94, 0.5); }
+}
+
+/* State-aware screen share button colors (inactive) */
+body.disconnected .share-btn:not(.active) {
+  border-color: rgba(248, 113, 113, 0.25);
+  color: #f87171;
+}
+
+body.waiting .share-btn:not(.active) {
+  border-color: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+}
+
+body.listening .share-btn:not(.active) {
+  border-color: rgba(0, 255, 229, 0.25);
+  color: #00ffe5;
+}
+
+body.thinking .share-btn:not(.active) {
+  border-color: rgba(167, 139, 250, 0.25);
+  color: #a78bfa;
+}
+
+body.speaking .share-btn:not(.active) {
+  border-color: rgba(0, 255, 229, 0.3);
+  color: #00ffe5;
+}
+
+body.tool .share-btn:not(.active) {
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}

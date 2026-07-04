@@ -1,0 +1,105 @@
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100vh;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  pointer-events: none;
+}
+
+.caption-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  max-width: 500px;
+  padding: 10px 16px;
+}
+
+.caption-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  pointer-events: none;
+}
+
+.caption-line.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Agent line - label on right, text flows right */
+.caption-line.caption-agent {
+  flex-direction: row-reverse;
+}
+
+.caption-label {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.label-user {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.label-agent {
+  background: rgba(0, 255, 229, 0.2);
+  color: #00ffe5;
+  border: 1px solid rgba(0, 255, 229, 0.3);
+}
+
+.caption-text {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.95), 0 0 40px rgba(0, 0, 0, 0.7), 0 0 80px rgba(0, 0, 0, 0.5);
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  word-break: break-word;
+  text-align: right;
+}
+
+/* Agent text aligns left within its row-reverse */
+.caption-agent .caption-text {
+  text-align: left;
+}
+
+/* Live typing cursor */
+.caption-text.typing::after {
+  content: '▎';
+  animation: blink 0.7s infinite;
+  margin-left: 1px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 300;
+}
+
+/* Final state - dim slightly */
+.caption-line.final .caption-text {
+  opacity: 0.5;
+  transition: opacity 1.5s ease 3s;
+}
+
+/* Glow behind active caption */
+.caption-line.visible:not(.final) .caption-text {
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.15));
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
