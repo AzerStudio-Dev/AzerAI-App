@@ -1,4 +1,4 @@
-const { AccessToken } = require("livekit-server-sdk");
+const { AccessToken, RoomServiceClient } = require("livekit-server-sdk");
 const { RoomConfiguration } = require("@livekit/protocol");
 const fs = require("fs");
 const path = require("path");
@@ -35,37 +35,48 @@ async function getConnectionDetails(options = {}) {
   if (!apiKey) throw new Error("LIVEKIT_API_KEY missing");
   if (!apiSecret) throw new Error("LIVEKIT_API_SECRET missing");
 
-  const agentName =
-    options?.room_config?.agents?.[0]?.agent_name ||
-    settings.LIVEKIT_AGENT_NAME ||
-    process.env.LIVEKIT_AGENT_NAME;
-  const participantName = "user";
-  const participantIdentity = `user_${Math.floor(Math.random() * 10000)}`;
-  const roomName = `room_${Math.floor(Math.random() * 10000)}`;
+  const agentNames =
+    options?.room_config?.agents?.map(a => a.agent_name) ||
+    settings.LIVEKIT_AGENT_NAMES ||
+    (process.env.LIVEKIT_AGENT_NAMES ? process.env.LIVEKIT_AGENT_NAMES.split(',').map(n => n.trim()).filter(n => n) : null);
+  const participantName = settings.LIVEKIT_PARTICIPANT_NAME || "user";
+  const participantIdentity = settings.LIVEKIT_PARTICIPANT_IDENTITY || `user_${Math.floor(Math.random() * 10000)}`;
+  const roomName = settings.LIVEKIT_ROOM_NAME || process.env.LIVEKIT_ROOM_NAME || "AzerAI_Home";
 
   const at = new AccessToken(apiKey, apiSecret, {
     identity: participantIdentity,
     name: participantName,
-    ttl: "15m",
+    ttl: "7d",
   });
 
   at.addGrant({
     room: roomName,
     roomJoin: true,
+    emptyTimeout: 600,
     canPublish: true,
     canPublishData: true,
     canSubscribe: true,
   });
 
-  if (agentName) {
+  if (agentNames && agentNames.length > 0) {
     at.roomConfig = new RoomConfiguration({
-      agents: [{ agentName }],
+      agents: agentNames.map(agentName => ({ agentName })),
     });
+  }
+
+  let roomExists = false;
+  try {
+    const svc = new RoomServiceClient(livekitUrl, apiKey, apiSecret);
+    const rooms = await svc.listRooms([roomName]);
+    roomExists = rooms.some(r => r.name === roomName);
+  } catch (e) {
+    console.error("Failed to check room existence:", e);
   }
 
   return {
     serverUrl: livekitUrl,
     roomName,
+    roomExists,
     participantName,
     participantToken: await at.toJwt(),
   };

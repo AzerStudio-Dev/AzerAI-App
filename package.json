@@ -1,6 +1,6 @@
 {
   "name": "azerai-app",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "AzerAI App - Azərbaycan Dilində Qabaqcıl Səsli AI Asistent",
   "private": true,
   "main": "electron/main.js",

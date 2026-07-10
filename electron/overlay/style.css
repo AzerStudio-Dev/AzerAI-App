@@ -24,15 +24,17 @@ body {
 .ring {
   position: absolute;
   border-radius: 50%;
-  border: 2px solid #00ffe5;
-  opacity: 0.6;
+  border: 4px solid #00ffe5;
+  opacity: 0.85;
+  box-shadow: 0 0 15px rgba(0, 255, 229, 0.3);
   transition: border-color 0.5s ease, opacity 0.5s ease;
 }
 
 .r1 {
   width: 100%;
   height: 100%;
-  animation: spin 6s linear infinite;
+  border-style: dashed;
+  animation: spin 10s linear infinite;
 }
 
 .r2 {
@@ -41,7 +43,7 @@ body {
   top: 15%;
   left: 15%;
   border-style: dashed;
-  animation: spinReverse 4s linear infinite;
+  animation: spinReverse 8s linear infinite;
 }
 
 .core {
@@ -52,7 +54,7 @@ body {
   left: 30%;
   background: radial-gradient(circle, #00ffe5, transparent);
   border-radius: 50%;
-  animation: pulse 2s infinite;
+  animation: pulse 3s infinite;
   z-index: 1;
   transition: background 0.5s ease, opacity 0.5s ease;
 }
@@ -95,7 +97,7 @@ body {
   border-radius: 50%;
   background: #00ffe5;
   z-index: 3;
-  animation: statusPulse 1.5s infinite;
+  animation: statusPulse 2.5s infinite;
   box-shadow: 0 0 8px #00ffe5;
   transition: background 0.5s ease, box-shadow 0.5s ease;
 }
@@ -128,7 +130,8 @@ body.disconnected .core {
 
 body.disconnected .ring {
   border-color: #f87171;
-  opacity: 0.3;
+  opacity: 0.5;
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.2);
 }
 
 body.disconnected .text {
@@ -157,7 +160,8 @@ body.waiting .core {
 
 body.waiting .ring {
   border-color: #fbbf24;
-  opacity: 0.4;
+  opacity: 0.7;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.25);
 }
 
 body.waiting .text {
@@ -174,12 +178,12 @@ body.waiting .status-text {
 
 /* ====== STATE: LISTENING (Cyan/Default) ====== */
 body.listening .core {
-  animation: pulse 1.5s infinite;
+  animation: pulse 2.5s infinite;
 }
 
 /* ====== STATE: THINKING (Purple) ====== */
 body.thinking .core {
-  animation: thinkingPulse 1s infinite;
+  animation: thinkingPulse 1.5s infinite;
   background: radial-gradient(circle, #a78bfa, transparent);
 }
 
@@ -190,6 +194,7 @@ body.thinking .status-dot {
 
 body.thinking .ring {
   border-color: #a78bfa;
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.3);
 }
 
 body.thinking .text {
@@ -206,12 +211,12 @@ body.thinking .status-text {
 
 /* ====== STATE: SPEAKING (Cyan, intense) ====== */
 body.speaking .core {
-  animation: speakingPulse 0.4s infinite;
+  animation: speakingPulse 0.6s infinite;
 }
 
 /* ====== STATE: TOOL (Yellow) ====== */
 body.tool .core {
-  animation: toolPulse 0.8s infinite;
+  animation: toolPulse 1.2s infinite;
   background: radial-gradient(circle, #fbbf24, transparent);
 }
 
@@ -222,7 +227,8 @@ body.tool .status-dot {
 
 body.tool .ring {
   border-color: #fbbf24;
-  opacity: 0.7;
+  opacity: 0.8;
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.35);
 }
 
 body.tool .text {
@@ -235,6 +241,35 @@ body.tool .version-text {
 
 body.tool .status-text {
   color: rgba(251, 191, 36, 0.9);
+}
+
+/* ====== STATE: COMPLETED (Green) ====== */
+body.completed .core {
+  animation: completedPulse 1.5s infinite;
+  background: radial-gradient(circle, #22c55e, transparent);
+}
+
+body.completed .status-dot {
+  background: #22c55e;
+  box-shadow: 0 0 10px #22c55e;
+}
+
+body.completed .ring {
+  border-color: #22c55e;
+  opacity: 0.85;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.35);
+}
+
+body.completed .text {
+  color: #22c55e;
+}
+
+body.completed .version-text {
+  color: rgba(34, 197, 94, 0.5);
+}
+
+body.completed .status-text {
+  color: rgba(34, 197, 94, 0.9);
 }
 
 /* ====== KEYFRAMES ====== */
@@ -269,6 +304,12 @@ body.tool .status-text {
   30% { transform: scale(1.2); opacity: 1; }
   60% { transform: scale(1.05); opacity: 0.85; }
   100% { transform: scale(1); opacity: 0.7; }
+}
+
+@keyframes completedPulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.6; }
 }
 
 @keyframes statusPulse {
@@ -349,6 +390,11 @@ body.speaking .lang-btn {
 body.tool .lang-btn {
   border-color: rgba(251, 191, 36, 0.3);
   color: #fbbf24;
+}
+
+body.completed .lang-btn {
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
 }
 
 /* Glassmorphic microphone button */
@@ -434,6 +480,11 @@ body.tool .mic-btn:not(.muted) {
   color: #fbbf24;
 }
 
+body.completed .mic-btn:not(.muted) {
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
 /* ====== CAMERA BUTTON ====== */
 .cam-btn {
   position: absolute;
@@ -514,6 +565,11 @@ body.speaking .cam-btn:not(.off) {
 body.tool .cam-btn:not(.off) {
   border-color: rgba(251, 191, 36, 0.3);
   color: #fbbf24;
+}
+
+body.completed .cam-btn:not(.off) {
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
 }
 
 /* ====== SCREEN SHARE BUTTON ====== */
@@ -602,4 +658,9 @@ body.speaking .share-btn:not(.active) {
 body.tool .share-btn:not(.active) {
   border-color: rgba(251, 191, 36, 0.3);
   color: #fbbf24;
+}
+
+body.completed .share-btn:not(.active) {
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
 }

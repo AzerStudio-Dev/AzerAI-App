@@ -46,6 +46,7 @@ export default function ConversationPanel({ disabledByMiniAzer = false }) {
   const room = useRoomContext();
   const [activeTool, setActiveTool] = useState(null);
   const [backgroundTool, setBackgroundTool] = useState(null);
+  const [backgroundToolCompleted, setBackgroundToolCompleted] = useState(null);
   const [toolCalls, setToolCalls] = useState([]);
   const toolTimeoutRef = useRef(null);
   const bgToolTimeoutRef = useRef(null);
@@ -71,6 +72,8 @@ export default function ConversationPanel({ disabledByMiniAzer = false }) {
       agentState: agentState || 'connecting', // Send actual agent state
       tool: false,
       toolName: '',
+      backgroundTool: backgroundTool || null,
+      backgroundToolCompleted: backgroundToolCompleted || null,
     };
 
     // Only show tool state when agent is NOT speaking (tool is processing, not just recently fired)
@@ -79,12 +82,20 @@ export default function ConversationPanel({ disabledByMiniAzer = false }) {
       overlayState.toolName = activeTool || backgroundTool;
       overlayState.thinking = false;
       overlayState.listening = false;
+      overlayState.backgroundTool = backgroundTool || null;
+    }
+
+    // Show completed status when background tool just finished
+    if (backgroundToolCompleted && !isSpeaking) {
+      overlayState.tool = true;
+      overlayState.toolName = backgroundToolCompleted;
+      overlayState.backgroundToolCompleted = backgroundToolCompleted;
     }
 
     window.livekit.azeraiUpdateState(overlayState).catch(err => {
       console.warn("Overlay state update failed:", err);
     });
-  }, [agentState, activeTool, agent?.audioLevel]);
+  }, [agentState, activeTool, backgroundTool, backgroundToolCompleted, agent?.audioLevel]);
 
   // Send transcription updates to caption overlay (with dedup to avoid spam)
   const lastSentRef = useRef(new Map()); // streamId -> last sent text
@@ -171,8 +182,9 @@ export default function ConversationPanel({ disabledByMiniAzer = false }) {
             console.log("📝 Added background tool call to state:", newToolCall);
           } else if (data.status === "completed") {
             setBackgroundTool(null);
+            setBackgroundToolCompleted(data.tool);
             if (bgToolTimeoutRef.current) clearTimeout(bgToolTimeoutRef.current);
-            
+
             // Tamamlandı logu ekle
             setToolCalls(prev => [
               ...prev,
@@ -185,6 +197,11 @@ export default function ConversationPanel({ disabledByMiniAzer = false }) {
               }
             ]);
             console.log("✅ Added background tool completion to state");
+
+            // 2 saniye sonra tamamlandı status'unu temizle
+            setTimeout(() => {
+              setBackgroundToolCompleted(null);
+            }, 2000);
           }
         }
       } catch (e) {
@@ -398,8 +415,9 @@ export default function ConversationPanel({ disabledByMiniAzer = false }) {
           <p className="conversation-kicker">{t("textStream")}</p>
           <h2>{t("conversation")}</h2>
         </div>
-        <span className="agent-status" data-state={(activeTool || backgroundTool) ? "tool-running" : agentState}>
-          {activeTool || backgroundTool ? `${t("toolRunning")} ${activeTool || backgroundTool}` : (() => {
+        <span className="agent-status" data-state={backgroundToolCompleted ? "tool-completed" : (activeTool || backgroundTool) ? "tool-running" : agentState}>
+          {backgroundToolCompleted ? `${t("toolCompleted")} ${backgroundToolCompleted}` :
+          activeTool || backgroundTool ? `${t("toolRunning")} ${activeTool || backgroundTool}` : (() => {
             const statusMap = {
               connecting: t("agentWaiting"),
               disconnected: t("agentOffline"),

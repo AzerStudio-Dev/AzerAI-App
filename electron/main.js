@@ -60,8 +60,8 @@ function createAzeraiOverlay() {
   const { width, height } = require("electron").screen.getPrimaryDisplay().workAreaSize;
 
   azeraiWindow = new BrowserWindow({
-    width: 280,
-    height: 280,
+    width: 300,
+    height: 300,
     x: width - 300,
     y: height - 300,
     frame: false,
@@ -1301,6 +1301,8 @@ ipcMain.handle("settings:get", () => {
     LIVEKIT_URL: process.env.LIVEKIT_URL || "",
     LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY || "",
     LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET || "",
+    LIVEKIT_PARTICIPANT_NAME: process.env.LIVEKIT_PARTICIPANT_NAME || "user",
+    LIVEKIT_PARTICIPANT_IDENTITY: process.env.LIVEKIT_PARTICIPANT_IDENTITY || "user_999",
     LIVEKIT_AGENT_NAME: process.env.LIVEKIT_AGENT_NAME || "",
     GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
@@ -1311,6 +1313,7 @@ ipcMain.handle("settings:get", () => {
     AUTO_CONNECT_ENABLED: false,
     AGENT_LAUNCH_MODE: "start",
     AUTO_LAUNCH: app.getLoginItemSettings().openAtLogin,
+    LIVEKIT_ROOM_NAME: process.env.LIVEKIT_ROOM_NAME || "AzerAI_Home",
   };
 });
 
@@ -1340,18 +1343,26 @@ ipcMain.handle("settings:save", (_, settings) => {
     if (settings.LIVEKIT_URL !== undefined) process.env.LIVEKIT_URL = settings.LIVEKIT_URL;
     if (settings.LIVEKIT_API_KEY !== undefined) process.env.LIVEKIT_API_KEY = settings.LIVEKIT_API_KEY;
     if (settings.LIVEKIT_API_SECRET !== undefined) process.env.LIVEKIT_API_SECRET = settings.LIVEKIT_API_SECRET;
+    if (settings.LIVEKIT_PARTICIPANT_NAME !== undefined) process.env.LIVEKIT_PARTICIPANT_NAME = settings.LIVEKIT_PARTICIPANT_NAME;
+    if (settings.LIVEKIT_PARTICIPANT_IDENTITY !== undefined) process.env.LIVEKIT_PARTICIPANT_IDENTITY = settings.LIVEKIT_PARTICIPANT_IDENTITY;
+    if (settings.LIVEKIT_AGENT_NAMES !== undefined) process.env.LIVEKIT_AGENT_NAMES = Array.isArray(settings.LIVEKIT_AGENT_NAMES) ? settings.LIVEKIT_AGENT_NAMES.join(',') : settings.LIVEKIT_AGENT_NAMES;
     if (settings.LIVEKIT_AGENT_NAME !== undefined) process.env.LIVEKIT_AGENT_NAME = settings.LIVEKIT_AGENT_NAME;
     if (settings.AI_PROVIDER !== undefined) process.env.AI_PROVIDER = settings.AI_PROVIDER;
+    if (settings.LIVEKIT_ROOM_NAME !== undefined) process.env.LIVEKIT_ROOM_NAME = settings.LIVEKIT_ROOM_NAME;
     
     // Agent ve Main .env fayllarini yenile
     const envUpdates = {
       LIVEKIT_URL: settings.LIVEKIT_URL,
       LIVEKIT_API_KEY: settings.LIVEKIT_API_KEY,
       LIVEKIT_API_SECRET: settings.LIVEKIT_API_SECRET,
+      LIVEKIT_PARTICIPANT_NAME: settings.LIVEKIT_PARTICIPANT_NAME,
+      LIVEKIT_PARTICIPANT_IDENTITY: settings.LIVEKIT_PARTICIPANT_IDENTITY,
+      LIVEKIT_AGENT_NAMES: Array.isArray(settings.LIVEKIT_AGENT_NAMES) ? settings.LIVEKIT_AGENT_NAMES.join(',') : settings.LIVEKIT_AGENT_NAMES,
       LIVEKIT_AGENT_NAME: settings.LIVEKIT_AGENT_NAME,
       GOOGLE_API_KEY: settings.GOOGLE_API_KEY,
       OPENAI_API_KEY: settings.OPENAI_API_KEY,
       AI_PROVIDER: settings.AI_PROVIDER,
+      LIVEKIT_ROOM_NAME: settings.LIVEKIT_ROOM_NAME,
     };
     
     updateAgentEnv(envUpdates);

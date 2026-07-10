@@ -76,6 +76,22 @@
   animation: pulse-bg 2s ease-in-out infinite;
 }
 
+.agent-status[data-state="tool-completed"] {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.26);
+  animation: pulse-bg-green 2s ease-in-out infinite;
+}
+
+@keyframes pulse-bg-green {
+  0%, 100% {
+    background: rgba(34, 197, 94, 0.14);
+  }
+  50% {
+    background: rgba(34, 197, 94, 0.24);
+  }
+}
+
 @keyframes pulse-bg {
   0%, 100% {
     background: rgba(139, 92, 246, 0.14);

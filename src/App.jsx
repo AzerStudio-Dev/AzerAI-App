@@ -70,13 +70,13 @@ const getWebConnectionDetails = async (customSettings) => {
   if (!apiKey) throw new Error("LIVEKIT_API_KEY çatışmır");
   if (!apiSecret) throw new Error("LIVEKIT_API_SECRET çatışmır");
 
-  const agentName = customSettings.LIVEKIT_AGENT_NAME;
-  const participantName = "user";
-  const participantIdentity = `user_${Math.floor(Math.random() * 10000)}`;
-  const roomName = `room_${Math.floor(Math.random() * 10000)}`;
+  const agentNames = customSettings.LIVEKIT_AGENT_NAMES;
+  const participantName = customSettings.LIVEKIT_PARTICIPANT_NAME || "user";
+  const participantIdentity = customSettings.LIVEKIT_PARTICIPANT_IDENTITY || `user_${Math.floor(Math.random() * 10000)}`;
+  const roomName = customSettings.LIVEKIT_ROOM_NAME || "AzerAI_Home";
 
   const nbf = Math.floor(Date.now() / 1000) - 30; // 30s buffer
-  const exp = nbf + 15 * 60; // 15 mins TTL
+  const exp = nbf + 7 * 24 * 60 * 60; // 7 days TTL
 
   const payload = {
     iss: apiKey,
@@ -84,18 +84,19 @@ const getWebConnectionDetails = async (customSettings) => {
     name: participantName,
     nbf,
     exp,
-    video: {
-      room: roomName,
-      roomJoin: true,
-      canPublish: true,
+      video: {
+        room: roomName,
+        roomJoin: true,
+        emptyTimeout: 600,
+        canPublish: true,
       canPublishData: true,
       canSubscribe: true,
     },
   };
 
-  if (agentName) {
+  if (agentNames && agentNames.length > 0) {
     payload.roomConfig = {
-      agents: [{ agentName }],
+      agents: agentNames.map(agentName => ({ agentName })),
     };
   }
 
@@ -227,6 +228,7 @@ export default function App() {
   const [connection, setConnection] = useState(null);
   const [error, setError] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionStatusMsg, setConnectionStatusMsg] = useState("");
   const [shouldBeConnected, setShouldBeConnected] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
@@ -645,8 +647,12 @@ export default function App() {
     }
     return {
       LIVEKIT_URL: "",
+      LIVEKIT_ROOM_NAME: "AzerAI_Home",
       LIVEKIT_API_KEY: "",
       LIVEKIT_API_SECRET: "",
+      LIVEKIT_PARTICIPANT_NAME: "user",
+      LIVEKIT_PARTICIPANT_IDENTITY: "user_999",
+      LIVEKIT_AGENT_NAMES: [],
       LIVEKIT_AGENT_NAME: "",
       AI_PROVIDER: "google",
     };
@@ -777,14 +783,31 @@ export default function App() {
   const handleConnect = () => {
     setShouldBeConnected(true);
     setIsConnecting(true);
+    setConnectionStatusMsg(t("preparingSession"));
     setError(null);
 
     if (window.livekit?.getConnectionDetails) {
       window.livekit
         .getConnectionDetails()
-        .then((details) => {
-          setConnection(details);
-          setIsConnecting(false);
+        .then(async (details) => {
+          setConnectionStatusMsg(t("roomChecking"));
+          
+          // details.roomExists is now coming from Electron backend (real RoomServiceClient check)
+          const exists = details.roomExists;
+
+          if (exists) {
+            setConnectionStatusMsg(t("roomAlreadyExistsJoining"));
+          } else {
+            setConnectionStatusMsg(t("roomCreatedAndJoined"));
+          }
+
+          setTimeout(() => {
+            setConnection(details);
+            setTimeout(() => {
+              setIsConnecting(false);
+              setConnectionStatusMsg("");
+            }, 3000);
+          }, 1000);
         })
         .catch((err) => {
           console.error("Connection attempt failed:", err);
@@ -793,8 +816,12 @@ export default function App() {
     } else {
       getWebConnectionDetails(settings)
         .then((details) => {
-          setConnection(details);
-          setIsConnecting(false);
+          setConnectionStatusMsg(t("roomAlreadyExistsJoining"));
+          setTimeout(() => {
+            setConnection(details);
+            setIsConnecting(false);
+            setConnectionStatusMsg("");
+          }, 1000);
         })
         .catch((err) => {
           console.error("Web connection generation failed:", err);
@@ -1037,7 +1064,12 @@ export default function App() {
                     {isConnecting ? t("preparingSession") : t("joinRoom")}
                   </button>
                   {isConnecting && (
-                    <div className="loading-line" style={{ margin: "1.5rem auto 0" }} />
+                    <div style={{ marginTop: "1rem", textAlign: "center" }}>
+                      <div className="loading-line" style={{ margin: "0 auto 0.5rem" }} />
+                      <p style={{ fontSize: "0.9rem", color: "#3b82f6", fontWeight: "500", animation: "pulse 2s infinite" }}>
+                        {connectionStatusMsg}
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
@@ -1146,6 +1178,77 @@ export default function App() {
             </div>
 
             <div className="settings-group">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                <label htmlFor="setting-room">{t("roomName")}</label>
+                {isConnecting && connectionStatusMsg && (
+                  <span style={{ fontSize: "0.8rem", color: "#3b82f6", fontWeight: "bold", marginBottom: "4px", animation: "fadeIn 0.3s ease-in-out" }}>
+                    {connectionStatusMsg}
+                  </span>
+                )}
+              </div>
+              <input
+                id="setting-room"
+                type="text"
+                value={settingsForm.LIVEKIT_ROOM_NAME || ""}
+                placeholder="AzerAI_Home"
+                disabled={isConnected || isConnecting}
+                onChange={(e) =>
+                  setSettingsForm({ ...settingsForm, LIVEKIT_ROOM_NAME: e.target.value })
+                }
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setSettingsSaveStatus("saving");
+                    try {
+                      const res = await storeSettings({
+                        ...settingsForm,
+                        AI_PROVIDER: aiProvider,
+                        OVERLAY_ENABLED: overlayEnabled,
+                        AUTO_CONNECT_ENABLED: autoConnectEnabled,
+                        AGENT_LAUNCH_MODE: agentLaunchMode,
+                        APP_LANG: language,
+                      });
+                      if (res && res.success) {
+                        setSettings({
+                          ...settingsForm,
+                          AI_PROVIDER: aiProvider,
+                          OVERLAY_ENABLED: overlayEnabled,
+                          AUTO_CONNECT_ENABLED: autoConnectEnabled,
+                          AGENT_LAUNCH_MODE: agentLaunchMode,
+                          APP_LANG: language,
+                        });
+                        setSettingsSaveStatus("success");
+                        setTimeout(() => setSettingsSaveStatus(null), 3000);
+                      } else {
+                        setSettingsSaveStatus("error");
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      setSettingsSaveStatus("error");
+                    }
+                  }
+                }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                <span className="settings-hint">
+                  {isConnected || isConnecting 
+                    ? `🔒 ${language === "az" ? "Bağlantı aktiv olduğu üçün dəyişdirilə bilməz" : language === "tr" ? "Bağlantı aktif olduğu için değiştirilemez" : "Cannot be changed because connection is active"}`
+                    : language === "az" ? "Otaq adı (varsayılan: AzerAI_Home). Saxlamaq üçün Enter-ə basın." : language === "tr" ? "Oda adı (varsayılan: AzerAI_Home). Kaydetmek için Enter'a basın." : "Room name (default: AzerAI_Home). Press Enter to save."}
+                </span>
+                {settingsSaveStatus === "success" && (
+                  <span style={{ color: "#10b981", fontSize: "0.75rem", fontWeight: "bold" }}>
+                    {t("settingsSaved")}
+                  </span>
+                )}
+                {settingsSaveStatus === "saving" && (
+                  <span style={{ color: "#3b82f6", fontSize: "0.75rem" }}>
+                    {t("saving")}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="settings-group">
               <label htmlFor="setting-key">{t("apiKey")}</label>
               <input
                 id="setting-key"
@@ -1183,12 +1286,146 @@ export default function App() {
             </div>
 
             <div className="settings-group">
-              <label htmlFor="setting-agent">{t("agentNameOpt")}</label>
+              <label htmlFor="setting-participant-name">{t("participantName")}</label>
               <input
-                id="setting-agent"
+                id="setting-participant-name"
+                type="text"
+                value={settingsForm.LIVEKIT_PARTICIPANT_NAME || ""}
+                placeholder="user"
+                disabled={isConnected || isConnecting}
+                onChange={(e) =>
+                  setSettingsForm({
+                    ...settingsForm,
+                    LIVEKIT_PARTICIPANT_NAME: e.target.value,
+                  })
+                }
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setSettingsSaveStatus("saving");
+                    try {
+                      const res = await storeSettings({
+                        ...settingsForm,
+                        AI_PROVIDER: aiProvider,
+                        OVERLAY_ENABLED: overlayEnabled,
+                        AUTO_CONNECT_ENABLED: autoConnectEnabled,
+                        AGENT_LAUNCH_MODE: agentLaunchMode,
+                        APP_LANG: language,
+                      });
+                      if (res && res.success) {
+                        setSettings({
+                          ...settingsForm,
+                          AI_PROVIDER: aiProvider,
+                          OVERLAY_ENABLED: overlayEnabled,
+                          AUTO_CONNECT_ENABLED: autoConnectEnabled,
+                          AGENT_LAUNCH_MODE: agentLaunchMode,
+                          APP_LANG: language,
+                        });
+                        setSettingsSaveStatus("success");
+                        setTimeout(() => setSettingsSaveStatus(null), 3000);
+                      } else {
+                        setSettingsSaveStatus("error");
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      setSettingsSaveStatus("error");
+                    }
+                  }
+                }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                <span className="settings-hint">
+                  {isConnected || isConnecting 
+                    ? `🔒 ${language === "az" ? "Bağlantı aktiv olduğu üçün dəyişdirilə bilməz" : language === "tr" ? "Bağlantı aktif olduğu için değiştirilemez" : "Cannot be changed because connection is active"}`
+                    : language === "az" ? "İstifadəçi adı (varsayılan: user). Saxlamaq üçün Enter-ə basın." : language === "tr" ? "Kullanıcı adı (varsayılan: user). Kaydetmek için Enter'a basın." : "User name (default: user). Press Enter to save."}
+                </span>
+                {settingsSaveStatus === "success" && (
+                  <span style={{ color: "#10b981", fontSize: "0.75rem", fontWeight: "bold" }}>
+                    {t("settingsSaved")}
+                  </span>
+                )}
+                {settingsSaveStatus === "saving" && (
+                  <span style={{ color: "#3b82f6", fontSize: "0.75rem" }}>
+                    {t("saving")}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="settings-group">
+              <label htmlFor="setting-participant-identity">{t("participantIdentity")}</label>
+              <input
+                id="setting-participant-identity"
+                type="text"
+                value={settingsForm.LIVEKIT_PARTICIPANT_IDENTITY || ""}
+                placeholder="user_999"
+                disabled={isConnected || isConnecting}
+                onChange={(e) =>
+                  setSettingsForm({
+                    ...settingsForm,
+                    LIVEKIT_PARTICIPANT_IDENTITY: e.target.value,
+                  })
+                }
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setSettingsSaveStatus("saving");
+                    try {
+                      const res = await storeSettings({
+                        ...settingsForm,
+                        AI_PROVIDER: aiProvider,
+                        OVERLAY_ENABLED: overlayEnabled,
+                        AUTO_CONNECT_ENABLED: autoConnectEnabled,
+                        AGENT_LAUNCH_MODE: agentLaunchMode,
+                        APP_LANG: language,
+                      });
+                      if (res && res.success) {
+                        setSettings({
+                          ...settingsForm,
+                          AI_PROVIDER: aiProvider,
+                          OVERLAY_ENABLED: overlayEnabled,
+                          AUTO_CONNECT_ENABLED: autoConnectEnabled,
+                          AGENT_LAUNCH_MODE: agentLaunchMode,
+                          APP_LANG: language,
+                        });
+                        setSettingsSaveStatus("success");
+                        setTimeout(() => setSettingsSaveStatus(null), 3000);
+                      } else {
+                        setSettingsSaveStatus("error");
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      setSettingsSaveStatus("error");
+                    }
+                  }
+                }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                <span className="settings-hint">
+                  {isConnected || isConnecting 
+                    ? `🔒 ${language === "az" ? "Bağlantı aktiv olduğu üçün dəyişdirilə bilməz" : language === "tr" ? "Bağlantı aktif olduğu için değiştirilemez" : "Cannot be changed because connection is active"}`
+                    : language === "az" ? "İstifadəçi ID (varsayılan: user_999). Saxlamaq üçün Enter-ə basın." : language === "tr" ? "Kullanıcı ID (varsayılan: user_999). Kaydetmek için Enter'a basın." : "User ID (default: user_999). Press Enter to save."}
+                </span>
+                {settingsSaveStatus === "success" && (
+                  <span style={{ color: "#10b981", fontSize: "0.75rem", fontWeight: "bold" }}>
+                    {t("settingsSaved")}
+                  </span>
+                )}
+                {settingsSaveStatus === "saving" && (
+                  <span style={{ color: "#3b82f6", fontSize: "0.75rem" }}>
+                    {t("saving")}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="settings-group">
+              <label htmlFor="setting-agent-single">LIVEKIT_AGENT_NAME</label>
+              <input
+                id="setting-agent-single"
                 type="text"
                 value={settingsForm.LIVEKIT_AGENT_NAME || ""}
-                placeholder={language === "az" ? "Agent adı" : language === "tr" ? "Agent adı" : "Agent name"}
+                placeholder="Agent name..."
                 onChange={(e) =>
                   setSettingsForm({
                     ...settingsForm,
@@ -1197,7 +1434,64 @@ export default function App() {
                 }
               />
               <span className="settings-hint">
-                {language === "az" ? "Qoşulunacaq varsayılan süni zəka köməkçisi (Agent) adı" : language === "tr" ? "Bağlanılacak varsayılan yapay zeka asistanı (Agent) adı" : "Default AI assistant (Agent) name to connect to"}
+                {language === "az" ? "Əsas agent adı" : language === "tr" ? "Ana agent adı" : "Primary agent name"}
+              </span>
+            </div>
+
+            <div className="settings-group">
+              <label htmlFor="setting-agent">{t("agentNameOpt")}</label>
+              <div className="agent-tags-container">
+                {Array.isArray(settingsForm.LIVEKIT_AGENT_NAMES) && settingsForm.LIVEKIT_AGENT_NAMES.map((name, index) => (
+                  <div key={index} className="agent-tag">
+                    <span>{name}</span>
+                    <button
+                      type="button"
+                      className="agent-tag-remove"
+                      onClick={async () => {
+                        const newNames = settingsForm.LIVEKIT_AGENT_NAMES.filter((_, i) => i !== index);
+                        const updatedSettings = {
+                          ...settingsForm,
+                          LIVEKIT_AGENT_NAMES: newNames.length > 0 ? newNames : null,
+                        };
+                        setSettingsForm(updatedSettings);
+                        // Auto-save immediately
+                        try {
+                          await storeSettings(updatedSettings);
+                        } catch (err) {
+                          console.error("Failed to save agent names:", err);
+                        }
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <input
+                  type="text"
+                  className="agent-tag-input"
+                  placeholder={language === "az" ? "Agent adı əlavə et..." : language === "tr" ? "Agent adı ekle..." : "Add agent name..."}
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      e.preventDefault();
+                      const newNames = [...(settingsForm.LIVEKIT_AGENT_NAMES || []), e.target.value.trim()];
+                      const updatedSettings = {
+                        ...settingsForm,
+                        LIVEKIT_AGENT_NAMES: newNames,
+                      };
+                      setSettingsForm(updatedSettings);
+                      e.target.value = '';
+                      // Auto-save immediately
+                      try {
+                        await storeSettings(updatedSettings);
+                      } catch (err) {
+                        console.error("Failed to save agent names:", err);
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <span className="settings-hint">
+                {language === "az" ? "Qoşulunacaq süni zəka köməkçiləri (Agent) adları - Enter ilə əlavə edin" : language === "tr" ? "Bağlanılacak yapay zeka asistanları (Agent) adları - Enter ile ekleyin" : "AI assistant (Agent) names to connect to - Press Enter to add"}
               </span>
             </div>
 

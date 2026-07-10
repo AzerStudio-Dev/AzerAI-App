@@ -33,6 +33,10 @@ let isSpeaking = false;
 let isThinking = false;
 let isTool = false;
 let toolName = '';
+let backgroundTool = null;
+let backgroundToolCompleted = null;
+let backgroundToolTimeout = null;
+let backgroundToolCompletedTimeout = null;
 let remoteAudioLevel = 0;
 let currentAgentState = 'disconnected';
 let currentLanguage = 'az';
@@ -45,6 +49,8 @@ const OVERLAY_TRANSLATIONS = {
     noConnection: 'Bağlantı yoxdur',
     waiting: 'Gözləyir',
     tool: 'Alət',
+    backgroundTool: 'Arxa planda',
+    completed: 'Tamamlandı',
     speaking: 'Danışır',
     thinking: 'Düşünür',
     listening: 'Dinləyir'
@@ -53,6 +59,8 @@ const OVERLAY_TRANSLATIONS = {
     noConnection: 'Bağlantı yok',
     waiting: 'Bekliyor',
     tool: 'Araç',
+    backgroundTool: 'Arka planda',
+    completed: 'Tamamlandı',
     speaking: 'Konuşuyor',
     thinking: 'Düşünüyor',
     listening: 'Dinliyor'
@@ -61,6 +69,8 @@ const OVERLAY_TRANSLATIONS = {
     noConnection: 'No connection',
     waiting: 'Waiting',
     tool: 'Tool',
+    backgroundTool: 'Background',
+    completed: 'Completed',
     speaking: 'Speaking',
     thinking: 'Thinking',
     listening: 'Listening'
@@ -73,11 +83,14 @@ const STATE_COLORS = {
   thinking:   { primary: '#a78bfa', secondary: '#8b5cf6', glow: '#a78bfa', particle: '167, 139, 250' },
   speaking:   { primary: '#00ffe5', secondary: '#00c8b4', glow: '#00ffe5', particle: '0, 255, 229' },
   tool:       { primary: '#fbbf24', secondary: '#f59e0b', glow: '#fbbf24', particle: '251, 191, 36' },
+  completed:  { primary: '#22c55e', secondary: '#16a34a', glow: '#22c55e', particle: '34, 197, 94' },
   disconnected: { primary: '#f87171', secondary: '#ef4444', glow: '#f87171', particle: '248, 113, 113' },
 };
 
 function getCurrentColors() {
   if (!isConnected) return STATE_COLORS.disconnected;
+  if (backgroundToolCompleted) return STATE_COLORS.completed;
+  if (backgroundTool) return STATE_COLORS.tool;
   if (isTool) return STATE_COLORS.tool;
   if (isSpeaking) return STATE_COLORS.speaking;
   if (isThinking) return STATE_COLORS.thinking;
@@ -89,10 +102,34 @@ function getStatusText() {
   const trans = OVERLAY_TRANSLATIONS[currentLanguage] || OVERLAY_TRANSLATIONS.az;
   if (!isConnected) return trans.noConnection;
   if (currentAgentState === 'connecting') return trans.waiting;
+  if (backgroundToolCompleted) return `${trans.completed}: ${backgroundToolCompleted}`;
+  if (backgroundTool) return `${trans.backgroundTool}: ${backgroundTool}`;
   if (isTool) return `${trans.tool}: ${toolName}`;
   if (isSpeaking) return trans.speaking;
   if (isThinking) return trans.thinking;
   return trans.listening;
+}
+
+// Update CSS classes based on current state
+function updateBodyClasses() {
+  document.body.classList.remove('disconnected', 'speaking', 'thinking', 'listening', 'tool', 'waiting', 'completed');
+  if (!isConnected) {
+    document.body.classList.add('disconnected');
+  } else if (backgroundToolCompleted) {
+    document.body.classList.add('completed');
+  } else if (backgroundTool) {
+    document.body.classList.add('tool');
+  } else if (isTool) {
+    document.body.classList.add('tool');
+  } else if (isSpeaking) {
+    document.body.classList.add('speaking');
+  } else if (isThinking) {
+    document.body.classList.add('thinking');
+  } else if (currentAgentState === 'connecting') {
+    document.body.classList.add('waiting');
+  } else {
+    document.body.classList.add('listening');
+  }
 }
 
 // Initialize audio
@@ -202,8 +239,60 @@ ipcRenderer.on('azerai:state', (event, state) => {
   isThinking = state.thinking;
   isTool = state.tool || false;
   toolName = state.toolName || '';
+  const prevBackgroundTool = backgroundTool;
+  backgroundTool = state.backgroundTool || null;
+  const prevBackgroundToolCompleted = backgroundToolCompleted;
+  backgroundToolCompleted = state.backgroundToolCompleted || null;
   remoteAudioLevel = state.audioLevel || 0;
   currentAgentState = state.agentState || 'disconnected';
+
+  // Handle background tool timeout (auto-clear after 3 seconds)
+  if (backgroundTool && backgroundTool !== prevBackgroundTool) {
+    if (backgroundToolTimeout) {
+      clearTimeout(backgroundToolTimeout);
+    }
+    backgroundToolTimeout = setTimeout(() => {
+      backgroundTool = null;
+      // Update status text and CSS classes
+      if (statusTextEl) {
+        statusTextEl.textContent = getStatusText();
+      }
+      updateBodyClasses();
+    }, 3000);
+  } else if (!backgroundTool) {
+    if (backgroundToolTimeout) {
+      clearTimeout(backgroundToolTimeout);
+      backgroundToolTimeout = null;
+    }
+  }
+
+  // Handle background tool completed timeout (auto-clear after 2 seconds)
+  if (backgroundToolCompleted && backgroundToolCompleted !== prevBackgroundToolCompleted) {
+    if (backgroundToolCompletedTimeout) {
+      clearTimeout(backgroundToolCompletedTimeout);
+    }
+    backgroundToolCompletedTimeout = setTimeout(() => {
+      backgroundToolCompleted = null;
+      // Update status text and CSS classes
+      if (statusTextEl) {
+        statusTextEl.textContent = getStatusText();
+      }
+      updateBodyClasses();
+    }, 2000);
+  } else if (!backgroundToolCompleted) {
+    if (backgroundToolCompletedTimeout) {
+      clearTimeout(backgroundToolCompletedTimeout);
+      backgroundToolCompletedTimeout = null;
+    }
+  }
+
+  // Immediately update status if backgroundTool or backgroundToolCompleted changed
+  if (backgroundTool !== prevBackgroundTool || backgroundToolCompleted !== prevBackgroundToolCompleted) {
+    if (statusTextEl) {
+      statusTextEl.textContent = getStatusText();
+    }
+    updateBodyClasses();
+  }
 
   if (state.language !== undefined) {
     currentLanguage = state.language;
@@ -250,20 +339,7 @@ ipcRenderer.on('azerai:state', (event, state) => {
   }
 
   // Update CSS classes for visual state
-  document.body.classList.remove('disconnected', 'speaking', 'thinking', 'listening', 'tool', 'waiting');
-  if (!isConnected) {
-    document.body.classList.add('disconnected');
-  } else if (isTool) {
-    document.body.classList.add('tool');
-  } else if (isSpeaking) {
-    document.body.classList.add('speaking');
-  } else if (isThinking) {
-    document.body.classList.add('thinking');
-  } else if (currentAgentState === 'connecting') {
-    document.body.classList.add('waiting');
-  } else {
-    document.body.classList.add('listening');
-  }
+  updateBodyClasses();
 
   // Update status text
   if (statusTextEl) {
